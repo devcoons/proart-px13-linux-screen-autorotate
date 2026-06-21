@@ -1,0 +1,10 @@
+# ASUS ProArt PX13 (HN7306) — AMD HID sensor hub accelerometer
+# Driver: hid_sensor_accel_3d / industrialio (IIO device name: accel_3d)
+#
+# This rule tags the built-in accelerometer so iio-sensor-proxy and other
+# tools consistently pick the internal sensor (not webcam proximity ALS stack).
+
+SUBSYSTEM=="iio", KERNEL=="iio:device*", ATTR{name}=="accel_3d", \
+  DEVPATH=="*0020:1022:0001.000A*", \
+  ENV{IIO_SENSOR_ACCEL_NAME}="proart-px13-accel", \
+  TAG+="system-accel"

@@ -1,0 +1,134 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+set -euo pipefail
+
+CONFIG="/etc/screen-autorotate.conf"
+SERVICE="screen-autorotate.service"
+SENSOR_SERVICE="iio-sensor-proxy.service"
+
+usage() {
+    cat <<'EOF'
+Usage: screen-autorotatectl <command>
+
+Commands:
+  status     Show service, sensor, and current orientation
+  enable     Enable autorotation at boot
+  disable    Disable autorotation at boot
+  start      Start the service now
+  stop       Stop the service now
+  restart    Restart the service
+  on         Enable in config and restart
+  off        Disable in config and stop
+EOF
+}
+
+require_root() {
+    if [[ "${EUID}" -ne 0 ]]; then
+        echo "This command requires root (sudo)." >&2
+        exit 1
+    fi
+}
+
+set_config_enabled() {
+    local value="$1"
+    require_root
+    if [[ ! -f "${CONFIG}" ]]; then
+        install -D -m 0644 /dev/stdin "${CONFIG}" <<'CONF'
+[autorotate]
+enabled = true
+internal_connector = eDP-1
+product_match = ProArt PX13
+require_product = true
+apply_persistent = false
+debounce_ms = 400
+CONF
+    fi
+    if grep -q '^enabled\s*=' "${CONFIG}"; then
+        sed -i "s/^enabled\s*=.*/enabled = ${value}/" "${CONFIG}"
+    else
+        sed -i "/^\[autorotate\]/a enabled = ${value}" "${CONFIG}"
+    fi
+}
+
+cmd_status() {
+    echo "== Product =="
+    tr -d '\n' < /sys/class/dmi/id/product_name 2>/dev/null || true
+    echo
+    echo
+    echo "== Accelerometer (IIO) =="
+    if [[ -r /sys/bus/iio/devices/iio:device0/name ]]; then
+        printf 'device: iio:device0 (%s)\n' "$(cat /sys/bus/iio/devices/iio:device0/name)"
+        printf 'path:   %s\n' "$(readlink -f /sys/bus/iio/devices/iio:device0)"
+    else
+        echo "No IIO accelerometer found"
+    fi
+    echo
+    echo "== iio-sensor-proxy =="
+    systemctl is-active "${SENSOR_SERVICE}" 2>/dev/null || echo "inactive"
+    if busctl status net.hadess.SensorProxy >/dev/null 2>&1; then
+        has_accel="$(busctl get-property net.hadess.SensorProxy /net/hadess/SensorProxy \
+            net.hadess.SensorProxy HasAccelerometer 2>/dev/null | awk '{print $2}')"
+        orientation="$(busctl get-property net.hadess.SensorProxy /net/hadess/SensorProxy \
+            net.hadess.SensorProxy AccelerometerOrientation 2>/dev/null | sed -n 's/^s "\(.*\)"$/\1/p')"
+        if [[ "${orientation}" == "undefined" || -z "${orientation}" ]]; then
+            sleep 1
+            orientation="$(busctl get-property net.hadess.SensorProxy /net/hadess/SensorProxy \
+                net.hadess.SensorProxy AccelerometerOrientation 2>/dev/null | sed -n 's/^s "\(.*\)"$/\1/p')"
+        fi
+        printf 'HasAccelerometer: %s\n' "${has_accel:-unknown}"
+        printf 'Orientation:      %s\n' "${orientation:-unknown}"
+    else
+        echo "D-Bus service not available"
+    fi
+    echo
+    echo "== screen-autorotate =="
+    systemctl is-enabled "${SERVICE}" 2>/dev/null || true
+    systemctl is-active "${SERVICE}" 2>/dev/null || true
+    if [[ -f "${CONFIG}" ]]; then
+        echo
+        echo "Config:"
+        grep -E '^(enabled|internal_connector|product_match)\s*=' "${CONFIG}" || true
+    fi
+}
+
+case "${1:-}" in
+    status)
+        cmd_status
+        ;;
+    enable)
+        require_root
+        systemctl enable "${SERVICE}"
+        echo "Enabled ${SERVICE}"
+        ;;
+    disable)
+        require_root
+        systemctl disable "${SERVICE}"
+        echo "Disabled ${SERVICE}"
+        ;;
+    start)
+        require_root
+        systemctl start "${SERVICE}"
+        ;;
+    stop)
+        require_root
+        systemctl stop "${SERVICE}"
+        ;;
+    restart)
+        require_root
+        systemctl restart "${SERVICE}"
+        ;;
+    on)
+        set_config_enabled true
+        systemctl restart "${SERVICE}"
+        echo "Autorotation enabled"
+        ;;
+    off)
+        set_config_enabled false
+        systemctl stop "${SERVICE}" || true
+        echo "Autorotation disabled"
+        ;;
+    *)
+        usage
+        exit 1
+        ;;
+esac
