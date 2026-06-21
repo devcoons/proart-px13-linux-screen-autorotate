@@ -11,14 +11,14 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo "Installing screen-autorotate..."
 
-install -D -m 0755 "${ROOT}/lib/autorotate.py" /usr/local/libexec/screen-autorotate/autorotate.py
+install -D -m 0755 "${ROOT}/lib/autorotate.py" /usr/libexec/screen-autorotate/autorotate.py
 install -D -m 0755 "${ROOT}/bin/screen-autorotatectl" /usr/local/bin/screen-autorotatectl
 install -D -m 0644 "${ROOT}/config/screen-autorotate.conf" /etc/screen-autorotate.conf
 install -D -m 0644 "${ROOT}/systemd/screen-autorotate.service" /etc/systemd/system/screen-autorotate.service
 install -D -m 0644 "${ROOT}/udev/61-proart-px13-accel.rules" /etc/udev/rules.d/61-proart-px13-accel.rules
 install -D -m 0644 "${ROOT}/systemd/iio-sensor-proxy.service.d/override.conf" \
     /etc/systemd/system/iio-sensor-proxy.service.d/override.conf
-install -D -m 0644 "${ROOT}/README.md" /usr/local/share/doc/screen-autorotate/README.md
+install -D -m 0644 "${ROOT}/README.md" /usr/share/doc/screen-autorotate/README.md
 
 # Dependencies on Fedora
 if command -v dnf >/dev/null; then
