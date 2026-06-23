@@ -4,7 +4,7 @@ Release:        1%{?dist}
 Summary:        Automatic screen rotation for ASUS ProArt PX13 on GNOME Wayland
 
 License:        GPL-3.0-or-later
-URL:            https://github.com/devcoons/screen-autorotate
+URL:            https://github.com/devcoons/proart-px13-screen-autorotate
 Source0:        %{url}/archive/v%{version}/%{name}-%{version}.tar.gz
 
 BuildArch:      noarch
@@ -13,6 +13,7 @@ BuildRequires:  systemd-rpm-macros
 Requires:       iio-sensor-proxy
 Requires:       python3-gobject
 Requires:       systemd
+Requires:       util-linux
 Requires:       udev
 
 %description

@@ -56,9 +56,16 @@ cmd_status() {
     echo
     echo
     echo "== Accelerometer (IIO) =="
-    if [[ -r /sys/bus/iio/devices/iio:device0/name ]]; then
-        printf 'device: iio:device0 (%s)\n' "$(cat /sys/bus/iio/devices/iio:device0/name)"
-        printf 'path:   %s\n' "$(readlink -f /sys/bus/iio/devices/iio:device0)"
+    accel_path=""
+    for dev in /sys/bus/iio/devices/iio:device*; do
+        if [[ "$(cat "${dev}/name" 2>/dev/null)" == "accel_3d" ]]; then
+            accel_path="${dev}"
+            break
+        fi
+    done
+    if [[ -n "${accel_path}" ]]; then
+        printf 'device: %s (accel_3d)\n' "$(basename "${accel_path}")"
+        printf 'path:   %s\n' "$(readlink -f "${accel_path}")"
     else
         echo "No IIO accelerometer found"
     fi

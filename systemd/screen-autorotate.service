@@ -1,8 +1,8 @@
 [Unit]
 Description=Automatic screen rotation for ASUS ProArt PX13
-Documentation=file:///usr/share/doc/screen-autorotate/README.md
-After=multi-user.target iio-sensor-proxy.service
-Wants=iio-sensor-proxy.service
+Documentation=file:///screen-autorotate/README.md
+After=multi-user.target gdm.service iio-sensor-proxy.service
+Wants=iio-sensor-proxy.service gdm.service
 ConditionPathExists=/sys/class/dmi/id/product_name
 
 [Service]
